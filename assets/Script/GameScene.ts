@@ -96,10 +96,10 @@ export default class GameScene extends cc.Component {
                 this.right_poker_shower.updateShow([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
                 this.own_poker_shower.updateShow([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
 
-                // setTimeout(() =>{
-                //     this.own_handCon_action.clear();
-                //     this.own_handCon_action.updateHandPai([1, 1,1,1,1,1,1,1,1,1]);
-                // },5000);
+                setTimeout(() =>{
+                    this.own_handCon_action.clear();
+                    this.own_handCon_action.updateHandPai([1, 1,1,1,1,1,1,1,1,1]);
+                },5000);
             }
         })
     }

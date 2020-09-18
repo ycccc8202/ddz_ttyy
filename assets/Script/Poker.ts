@@ -22,8 +22,7 @@ export default class Poker extends cc.Component {
     defaultSpriteFrame: cc.SpriteFrame;
     isMoveUp: boolean;
     onLoad() {
-        //this.node.on(cc.Node.EventType.TOUCH_START, () => {cc.log("click,",this.index)});
-        this.icon_con.on(cc.Node.EventType.TOUCH_START, () => null);
+        this.icon_con.on(cc.Node.EventType.TOUCH_START, () => null);//这样处理可以让父容器的target能获取到真实的目标
     }
     //初始化数据 add之后进行牌的初始化
     init(card: CardData = null) {

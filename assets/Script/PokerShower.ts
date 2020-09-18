@@ -76,10 +76,17 @@ export default class PokerShower extends cc.Component {
     }
     clear() {
 
-        for(let node of this.node.children){
+        // for(let node of this.node.children){
+        //     poker_pool.return(node);
+        // }
+
+        for(let i = this.node.childrenCount - 1 ; i >=0 ; i --){
+            let node = this.node.children[i];
+            node.parent = null;
             poker_pool.return(node);
         }
-        this.node.removeAllChildren();
+
+        //this.node.removeAllChildren();
     }
     // update (dt) {}
 }

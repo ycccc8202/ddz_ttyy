@@ -50,13 +50,14 @@ export var poker_pool = {
     pool:[],
     //获取 暂时无效果(待解决)
     borrow(prefab:cc.Prefab):cc.Node{
-        //return this.pool.length ? this.pool.shift() : cc.instantiate(prefab);
-        return cc.instantiate(prefab);
+        return this.pool.length ? this.pool.shift() : cc.instantiate(prefab);
+        //return cc.instantiate(prefab);
     },
     //释放
     return(node:cc.Node){
-        //this.pool.push(node);
+        this.pool.push(node);
     }
+    
 
 }
 export enum PokerShowType{

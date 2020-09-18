@@ -172,11 +172,12 @@ export default class OwnHandCon extends cc.Component {
     }
 
     clear() {
-
-        for(let node of this.node.children){
+        for(let i = this.node.childrenCount - 1 ; i >=0 ; i --){
+            let node = this.node.children[i];
+            node.parent = null;
             poker_pool.return(node);
         }
-        this.node.removeAllChildren();
+        ///不能使用 this.node.removeAllChildren(),会产生错误
         this.select_pokers_temp = [];
         this.pokers = [];
     }
