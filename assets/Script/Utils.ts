@@ -404,9 +404,9 @@ export function getAIList(list: number[], target: number[]) {
 
     if (targetPartern.type == DDZ_POKER_TYPE.KING_BOMB) return [];
 
-    //列表的1-4张分组
-    paiTool.sortDescending(list);
 
+    paiTool.sortDescending(list);
+    //列表的1-4张分组
     let list_count_14 = paiTool.getCountPais_1_4(list);
 
     let result = [];
@@ -951,4 +951,216 @@ export function getAIList(list: number[], target: number[]) {
 
     return result;
 
+}
+
+//搜索智能随意出牌列表
+export function getAIFreeList(list: number[]) {
+
+    paiTool.sortDescending(list);
+    //列表的1-4张分组
+    let list_count_14 = paiTool.getCountPais_1_4(list);
+
+    let result = [];
+
+    //权重列表
+    let g_list = [
+        DDZ_POKER_TYPE.STRAIGHT_TWIN,//连对
+        DDZ_POKER_TYPE.STRAIGHT_SINGLE,//顺子
+        DDZ_POKER_TYPE.TRIPLE_WITH_SINGLE,//三带单
+        DDZ_POKER_TYPE.TRIPLE_WITH_TWIN,//三带双
+        DDZ_POKER_TYPE.TWIN,//对子
+        DDZ_POKER_TYPE.KING_BOMB,//王炸
+        DDZ_POKER_TYPE.SINGLE //单牌
+    ];
+    //单条结果
+    let single_result = null;
+
+    loop: for (let k = 0; k < g_list.length; k++) {
+
+        let start_grade;
+
+        let temp_list = [];
+
+        switch (g_list[k]) {
+
+            case DDZ_POKER_TYPE.STRAIGHT_TWIN://连对
+
+                cc.log("find STRAIGHT_TWIN ....");
+
+                if (list.length < 6) break;
+
+                start_grade = -1;
+
+                for (let i = 0; i < list.length - 5; i++) {
+
+                    let grade_1 = config.getCard(list[i]).grade;
+
+                    let grade_2 = config.getCard(list[i + 1]).grade;
+
+                    if (grade_1 == 16 || grade_1 == 17 || grade_1 == 15 || grade_1 != grade_2 || grade_1 == start_grade) {
+                        continue;
+                    }
+                    start_grade = grade_1;
+                    let j = i + 2;
+                    let prev_grade = grade_1;
+                    let temp = [list[i], list[i + 1]];
+                    //找到第一对，然后往前继续找
+                    while (j < list.length - 1) {
+
+                        let grade_3 = config.getCard(list[j]).grade;
+
+                        if (grade_3 == prev_grade) {
+                            j++;
+                            continue;
+                        }
+
+                        let grade_4 = config.getCard(list[j + 1]).grade;
+
+                        if (grade_3 + 1 == prev_grade && grade_3 == grade_4) {
+                            prev_grade = grade_3;
+                            temp.push(list[j], list[j + 1]);
+                            j += 2;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (temp.length >= 6) {
+                        cc.log("入列:", temp)
+                        temp_list.push(temp);
+                    }
+                }
+
+                break;
+            case DDZ_POKER_TYPE.STRAIGHT_SINGLE://顺子
+
+                cc.log("find STRAIGHT_SINGLE ....");
+
+                if (list.length < 5) break;
+
+                start_grade = -1;
+
+                for (let i = 0; i < list.length - 4; i++) {
+
+                    let grade = config.getCard(list[i]).grade;
+
+                    if (grade == 16 || grade == 17 || grade == 15 || start_grade == grade) {
+                        continue;
+                    }
+                    start_grade = grade;
+                    let j = i + 1;
+                    let temp = [list[i]];
+                    let prev_grade = grade;
+                    while (j < list.length) {
+                        let grade_1 = config.getCard(list[j]).grade;
+                        if (prev_grade == grade_1) {
+                            j++;
+                            continue;
+                        }
+                        if (grade_1 + 1 == prev_grade) {
+                            temp.push(list[j]);
+                            prev_grade = grade_1;
+                            j++;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (temp.length >= 5) {
+                        cc.log("入列:", temp)
+                        temp_list.push(temp);
+                    }
+                }
+
+                break;
+            case DDZ_POKER_TYPE.TRIPLE_WITH_SINGLE://三带单
+                cc.log("find TRIPLE_WITH_SINGLE ....");
+
+                if (list.length < 4) break;
+
+                if (list_count_14[3].length) {
+                    //取最后一个
+                    let triple = list_count_14[3].slice(-3);
+                    //找翅膀
+                    if (list_count_14[1].length) {
+
+                        let wing = list_count_14[1][list_count_14[1].length - 1];
+
+                        if (list.length == 4 || list.length == 5 || (config.getCard(triple[0]).grade < 14 && config.getCard(wing).grade < 14)) {
+
+                            triple.push(wing);
+                            cc.log("入列:", triple)
+                            temp_list.push(triple);
+                        }
+                    }
+                }
+                break;
+            case DDZ_POKER_TYPE.TRIPLE_WITH_TWIN://三带双
+                cc.log("find TRIPLE_WITH_TWIN ....");
+                if (list.length < 5) break;
+                if (list_count_14[3].length) {
+                    //取最后一个
+                    let triple = list_count_14[3].slice(-3);
+                    //找翅膀
+                    if (list_count_14[2].length) {
+
+                        let wing = list_count_14[2].slice(-2);
+
+                        if (list.length == 5 || list.length == 6 || (config.getCard(triple[0]).grade < 14 && config.getCard(wing[0]).grade < 14)) {
+
+                            triple = triple.concat(wing);
+                            cc.log("入列:", triple)
+                            temp_list.push(triple);
+                        }
+                    }
+                }
+                break;
+            case DDZ_POKER_TYPE.TWIN:
+                cc.log("find TWIN ....");
+                if (list.length < 2) break;
+                start_grade = -1;
+
+                for (let i = 0; i < list.length - 1; i++) {
+
+                    let grade = config.getCard(list[i]).grade;
+
+                    if (grade == 16 || grade == 17 || grade == start_grade) continue;
+
+                    start_grade = grade;
+
+                    let grade_1 = config.getCard(list[i + 1]).grade;
+
+                    let temp = [list[i]];
+
+                    if (grade == grade_1) {
+                        temp.push(list[i + 1]);
+                        cc.log("入列:", temp)
+                        temp_list.push(temp);
+                    }
+                }
+                break;
+            case DDZ_POKER_TYPE.KING_BOMB:
+                cc.log("find KING_BOMB ....");
+                if (list.length == 2 || list.length == 3) {
+                    let grade_1 = config.getCard(list[0]).grade;
+                    let grade_2 = config.getCard(list[1]).grade;
+                    if (grade_1 == 17 && grade_2 == 16) {
+                        cc.log("入列:", [list[0], list[1]]);
+                        temp_list.push([list[0], list[1]]);
+                    }
+                }
+                break;
+            case DDZ_POKER_TYPE.SINGLE:
+                cc.log("find STRAIGHT_SINGLE ....");
+                cc.log("入列:", list[list.length - 1])
+                temp_list.push([list[list.length - 1]]);
+                break;
+        }
+        if (temp_list.length && !single_result) {
+
+            single_result = temp_list[temp_list.length - 1];
+
+            //break loop;
+        }
+    }
+    cc.log("-----------查找优先出牌结束-------------");
+    return single_result;
 }

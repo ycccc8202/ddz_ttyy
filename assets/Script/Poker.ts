@@ -35,13 +35,12 @@ export default class Poker extends cc.Component {
             frame = game.getPokerSpriteFrameMap(card.spriteFrame);
         }
         this.icon.spriteFrame = frame;
-        this.reset();
     }
     //选中
     select() {
         this.icon.node.color = cc.Color.BLACK.fromHEX("#808080");
     }
-    //取消选中
+    //取消选中8
     unselect() {
         this.icon.node.color = cc.Color.BLACK.fromHEX("#FFFFFF");
     }
@@ -63,5 +62,12 @@ export default class Poker extends cc.Component {
         this.moveBack();
         this.unselect();
     }
-    // update (dt) {}
+    
+    //对象池默认调用
+    unuse(){
+
+    }
+    reuse(){
+        this.reset();
+    }
 }

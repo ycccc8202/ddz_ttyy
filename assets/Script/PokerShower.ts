@@ -1,5 +1,5 @@
 
-import { PokerShowType, poker_pool } from "./Game";
+import { PokerShowType, pools } from "./Game";
 import Poker from "./Poker";
 import { config } from "./Utils";
 
@@ -41,7 +41,7 @@ export default class PokerShower extends cc.Component {
         let sx = this.layout.width / 2;
         for (let i = 0; i < pais.length; i++) {
             let pai = pais[i];
-            let poker: Poker = poker_pool.borrow(this.prefab_poker).getComponent<Poker>(Poker);
+            let poker: Poker = pools.poker_get(this.prefab_poker).getComponent<Poker>(Poker);
             poker.node.x = sx + i % this.layout.yCount * this.layout.spaceX;
             poker.node.y = -(i / this.layout.yCount ^ 0) * this.layout.spaceY;
             poker.node.parent = this.node;
@@ -58,7 +58,7 @@ export default class PokerShower extends cc.Component {
 
         for (let i = 0; i < pais.length; i++) {
             let pai = pais[i];
-            let poker: Poker = poker_pool.borrow(this.prefab_poker).getComponent<Poker>(Poker);
+            let poker: Poker = pools.poker_get(this.prefab_poker).getComponent<Poker>(Poker);
             poker.node.x = sx + i % this.layout.yCount * this.layout.spaceX;
             poker.node.y = -(i / this.layout.yCount ^ 0) * this.layout.spaceY;
             poker.node.parent = this.node;
@@ -67,9 +67,12 @@ export default class PokerShower extends cc.Component {
     }
     //自己的出牌 居中单行显示
     owner(pais: any) {
+        cc.log("Layout", this.getComponent(cc.Layout));
         for (let i = 0; i < pais.length; i++) {
             let pai = pais[i];
-            let poker: Poker = poker_pool.borrow(this.prefab_poker).getComponent<Poker>(Poker);
+            let poker: Poker = pools.poker_get(this.prefab_poker).getComponent<Poker>(Poker);
+            poker.node.x = 0;
+            poker.node.y = 0;
             poker.node.parent = this.node;
             poker.init(config.getCard(pai));
         }
@@ -82,8 +85,9 @@ export default class PokerShower extends cc.Component {
 
         for(let i = this.node.childrenCount - 1 ; i >=0 ; i --){
             let node = this.node.children[i];
-            node.parent = null;
-            poker_pool.return(node);
+            //node.parent = null;
+            //poker_pool.return(node);
+            pools.poker_put(node)
         }
 
         //this.node.removeAllChildren();

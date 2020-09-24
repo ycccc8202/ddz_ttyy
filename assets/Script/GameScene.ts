@@ -1,14 +1,15 @@
 
-import { game } from "./Game";
+import { game, OPERATION_STATUS } from "./Game";
 import Head from "./Head";
 import { message } from "./MessageCenter";
 import { Net } from "./Net";
 import MenuDizhu from "./MenuDizhu";
 import MenuPlay from "./MenuPlay";
-import { paiTool } from "./Utils";
+import { getAIFreeList, paiTool } from "./Utils";
 import OwnHandCon from "./OwnHandCon";
 import PokerShower from "./PokerShower";
 import DipaiShower from "./DipaiShower";
+import Clock from "./Clock";
 
 const { ccclass, property } = cc._decorator;
 
@@ -57,13 +58,13 @@ export default class GameScene extends cc.Component {
     @property(DipaiShower)
     dipai_shower: DipaiShower = null;
 
-    head_own_weight: cc.Widget;
+    @property(Clock)
+    clock: Clock = null;
 
     onLoad() {
         this.clearReady();
         this.menu_dizhu_action = this.menu_dizhu.getComponent<MenuDizhu>(MenuDizhu);
         this.menu_play_action = this.menu_play.getComponent<MenuPlay>(MenuPlay);
-        this.head_own_weight = this.head_own.node.getComponent<cc.Widget>(cc.Widget);
         this.own_handCon_action = this.own_handCon.getComponent<OwnHandCon>(OwnHandCon);
     }
     start() {
@@ -79,6 +80,7 @@ export default class GameScene extends cc.Component {
         this.menu_dizhu.active = false;
         this.menu_play.active = false;
         this.dipai_shower.node.active = false;
+        this.clearClock();
     }
     //加载扑克资源
     loadRes() {
@@ -91,15 +93,21 @@ export default class GameScene extends cc.Component {
             cc.log("扑克资源加载完成");
             //测试
             if (!Net.socket) {
-                this.own_handCon_action.updateHandPai([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15]);
+                this.own_handCon_action.updateHandPai([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
                 this.left_poker_shower.updateShow([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
                 this.right_poker_shower.updateShow([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
                 this.own_poker_shower.updateShow([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
-
+                //this.addClock();
                 setTimeout(() =>{
                     this.own_handCon_action.clear();
                     this.own_handCon_action.updateHandPai([1, 1,1,1,1,1,1,1,1,1]);
                 },5000);
+
+
+                //牌型测试
+                let list = [3,3,3,3,4,4,4,4,5,5,5,5];
+                cc.log(">>>>>>>>>>>>> ",list);
+                cc.log(">>>>>>>>>>>>> ",getAIFreeList(list));
             }
         })
     }
@@ -119,7 +127,9 @@ export default class GameScene extends cc.Component {
         }
     }
 
-    ready(){
+    ready() {
+        game.operation_status = OPERATION_STATUS.READY;
+        this.addClock();
         this.btn_ready.active = true;
         this.btn_ready_text.string = this.label_left_msg.string = this.label_right_msg.string = "未准备";
     }
@@ -147,28 +157,59 @@ export default class GameScene extends cc.Component {
 
     }
     //刷新剩余牌数
-    updateLeftCount() {
+    requestLeftCount() {
         Net.emit('refreshCardsCount', game.roomID);
+    }
+    //添加时钟
+    addClock() {
+        if (!game.auto.AIPush) return;
+        this.clock.node.active = true;
+        this.clock.play(game.auto.pushDelay, () => {
+            game.autoOperation();
+            this.clearClock();
+            this.clearMenu();
+        })
+    }
+    clearMenu(){
+        this.btn_ready.active = false;
+        this.menu_play.active = false;
+        this.menu_dizhu.active = false;
+    }
+
+    clearClock() {
+        this.clock.node.active = false;
+        this.clock.stop();
     }
     addEvents() {
         message.on("getRoomDataBack", () => {
             this.updateRoomPlayers();
         });
+        message.on("clearClock",()=>{
+            this.clearClock();
+        });
+        message.on("click_ready",()=>{
+            this.click_ready();
+        });
         Net.on("readyGame" + game.roomID, data => {
             if (data.roomIndex == game.leftPlayer.index) {
                 this.label_left_msg.string = data.ready ? "准备" : "未准备";
+                game.leftPlayer.ready = data.ready;
             }
             if (data.roomIndex == game.rightPlayer.index) {
                 this.label_right_msg.string = data.ready ? "准备" : "未准备";
+                game.rightPlayer.ready = data.ready;
             }
             if (data.roomIndex == game.ownPlayer.index) {
                 this.btn_ready_text.string = data.ready ? "准备" : "未准备";
+                game.ownPlayer.ready = data.ready;
             }
         });
         Net.on('startGame' + game.roomID, data => {
             this.clearReady();
             //data 是菜单轮选位置
             if (data == game.ownPlayer.index) {
+                game.operation_status = OPERATION_STATUS.SELECT_DIZHU;
+                this.addClock();
                 this.menu_dizhu.active = true;
                 this.menu_dizhu_action.updateFirst(true);
             }
@@ -204,6 +245,9 @@ export default class GameScene extends cc.Component {
                 this.menu_dizhu.active = true;
                 this.updateMsg(data.nextIndex, "");
                 this.menu_dizhu_action.updateFirst(data.isFirst);
+
+                game.operation_status = OPERATION_STATUS.SELECT_DIZHU;
+                this.addClock();
             } else {
                 this.menu_dizhu.active = false;
             }
@@ -224,12 +268,15 @@ export default class GameScene extends cc.Component {
 
             //自己是地主
             if (playerIndex == game.ownPlayer.index) {
+                game.operation_status = OPERATION_STATUS.SELECT_FREE;
                 //显示打牌菜单
                 this.menu_play.active = true;
                 this.menu_play_action.setMenu(false, false, true);
                 Net.emit('getCards', { roomID: game.roomID, index: playerIndex });
+                //加入时钟
+                this.addClock();
             }
-            this.updateLeftCount();
+            this.requestLeftCount();
         });
         Net.on('getDipaiCardsBack' + game.roomID, cards => {
             this.dipai_shower.updatePais(cards);
@@ -244,7 +291,7 @@ export default class GameScene extends cc.Component {
             //存储上一手牌
             game.lastPokers = playerIndex == game.ownPlayer.index ? [] : data.pokers;
 
-            this.updateLeftCount();
+            this.requestLeftCount();
 
             this.updateMsg(playerIndex, "");
 
@@ -262,7 +309,7 @@ export default class GameScene extends cc.Component {
                 this.menu_play.active = false;
                 this.own_poker_shower.updateShow(pokers);
                 //请求手牌
-                Net.emit('getCards', {roomID:game.roomID, index:game.ownPlayer.index});
+                Net.emit('getCards', { roomID: game.roomID, index: game.ownPlayer.index });
                 //重置poker
                 // var showPoker = self.playerHandCards.getComponent('ShowPoker');
                 // showPoker.pokerAllDown();
@@ -271,23 +318,20 @@ export default class GameScene extends cc.Component {
         });
         Net.on('buchu', index => {
             //let data = JSON.parse(mes);
-           
-            this.updateMsg(index,"不出");
+
+            this.updateMsg(index, "不出");
         })
-        
+
         //打牌菜单回调
         Net.on('playerAction', msg => {
             let data = JSON.parse(msg);
-            //game.isFirst = data.isFirst;
-            //game.lastPokerType = data.lastPokerType;
-
             //当前操作对象
             this.updateTurnTip(data.nextIndex);
             //轮到某人出牌清理文本显示
             this.updateMsg(data.nextIndex, "");
 
             //轮到某人随意出牌
-            if(data.isFirst) this.clearAllShower();
+            if (data.isFirst) this.clearAllShower();
 
             if (data.nextIndex == game.ownPlayer.index) {
 
@@ -296,14 +340,16 @@ export default class GameScene extends cc.Component {
                 this.own_poker_shower.clear();
 
                 //要不起，自动pass
-                if (game.autoPass && !data.isFirst && game.ailist.length == 0) {
+                if (game.auto.pass && !data.isFirst && game.ailist.length == 0) {
                     //this.lab_own_show.string = "自动...";
-                    this.updateMsg(game.ownPlayer.index,"自动...")
-                    setTimeout(()=>this.menu_play_action.buchu(),2000);
+                    this.updateMsg(game.ownPlayer.index, "自动...")
+                    setTimeout(() => this.menu_play_action.buchu(), 2000);
                 }
                 else {
+                    game.operation_status = data.isFirst ? OPERATION_STATUS.SELECT_FREE : OPERATION_STATUS.SELECT_PREV;
                     this.menu_play.active = true;
                     this.menu_play_action.setMenu(!data.isFirst, !data.isFirst, true);
+                    this.addClock();
                 }
             }
         });
@@ -315,7 +361,7 @@ export default class GameScene extends cc.Component {
         //收到结束
         Net.on("gameOver", data => {
             this.clearMsg();
-            this.updateMsg(data,"win");
+            this.updateMsg(data, "win");
             setTimeout(() => this.gameover(), 2000);
 
         });
@@ -327,12 +373,16 @@ export default class GameScene extends cc.Component {
     clearMsg() {
         this.label_own_msg.string = this.label_right_msg.string = this.label_left_msg.string = "";
     }
-    clearAllShower(){
+    clearAllShower() {
         this.left_poker_shower.clear();
         this.right_poker_shower.clear();
         this.own_poker_shower.clear();
     }
-    allHeadRoundReset(){
+    clearDipaiShower(){
+        this.dipai_shower.node.active = false;
+        this.dipai_shower.reset();
+    }
+    allHeadRoundReset() {
         this.head_own.updateIcon("girl");
         this.head_left.updateIcon("girl");
         this.head_right.updateIcon("girl");
@@ -345,15 +395,17 @@ export default class GameScene extends cc.Component {
     click_ready() {
 
         Net.emit('readyGame', { roomID: game.roomID, index: game.ownPlayer.index });//game.roomNum, game.roomIndex);
+        message.emit("clearClock");
     }
 
     gameover() {
         game.roundReset();
+        this.clearClock();
         this.clearMsg();
         this.clearAllShower();
+        this.clearDipaiShower();
         this.allHeadRoundReset();
         this.own_handCon_action.clear();
-        this.dipai_shower.node.active = false;
         this.ready();
     }
     // update (dt) {}

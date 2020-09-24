@@ -1,4 +1,4 @@
-import { poker_pool } from "./Game";
+import { pools } from "./Game";
 import { message } from "./MessageCenter";
 import Poker from "./Poker";
 import { config } from "./Utils";
@@ -50,7 +50,7 @@ export default class OwnHandCon extends cc.Component {
         let startX = -pokersWidth / 2 + this.layout.width / 2;
         for (let i = 0; i < pais.length; i++) {
             let pai = pais[i];
-            let poker: Poker = poker_pool.borrow(this.prefab_poker).getComponent<Poker>(Poker);
+            let poker: Poker = pools.poker_get(this.prefab_poker).getComponent<Poker>(Poker);
             poker.node.x = startX + i * this.layout.spaceX;
             poker.node.y = 0;
             poker.node.parent = this.node;
@@ -58,7 +58,6 @@ export default class OwnHandCon extends cc.Component {
             poker.index = i;
             this.pokers.push(poker);
         }
-
     }
     //双排
     private twinRom(pais:any) {
@@ -81,7 +80,7 @@ export default class OwnHandCon extends cc.Component {
                 y = downY;
             }
             let pai = pais[i];
-            let poker: Poker = poker_pool.borrow(this.prefab_poker).getComponent<Poker>(Poker);
+            let poker: Poker = pools.poker_get(this.prefab_poker).getComponent<Poker>(Poker);
             poker.node.x = x + i%upCount * this.layout.spaceX;
             poker.node.y = y;
             poker.node.parent = this.node;
@@ -174,12 +173,14 @@ export default class OwnHandCon extends cc.Component {
     clear() {
         for(let i = this.node.childrenCount - 1 ; i >=0 ; i --){
             let node = this.node.children[i];
-            node.parent = null;
-            poker_pool.return(node);
+            //node.parent = null;
+            //poker_pool.return(node);
+            pools.poker_put(node);
         }
         ///不能使用 this.node.removeAllChildren(),会产生错误
         this.select_pokers_temp = [];
         this.pokers = [];
+        cc.NodePool
     }
     // update (dt) {}
 }

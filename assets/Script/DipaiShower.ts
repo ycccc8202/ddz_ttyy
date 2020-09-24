@@ -19,7 +19,12 @@ export default class DipaiShower extends cc.Component {
         this.poker_1.init(config.getCard(pais[0]));
         this.poker_2.init(config.getCard(pais[1]));
         this.poker_3.init(config.getCard(pais[2]));
-            
+        
+    }
+    reset(){
+        this.poker_1.init(null);
+        this.poker_2.init(null);
+        this.poker_3.init(null);
     }
 
     // update (dt) {}

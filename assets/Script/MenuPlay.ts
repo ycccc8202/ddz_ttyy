@@ -1,4 +1,5 @@
 import { game } from "./Game";
+import { message } from "./MessageCenter";
 import { Net } from "./Net";
 import OwnHandCon from "./OwnHandCon";
 import { DDZ_POKER_TYPE, paiTool } from "./Utils";
@@ -26,6 +27,8 @@ export default class MenuPlay extends cc.Component {
             roomNum: game.roomID
         }));
         this.node.active = false;
+
+        message.emit("clearClock");
     }
     tishi() {
         if(game.ailist.length){
@@ -74,6 +77,7 @@ export default class MenuPlay extends cc.Component {
                 playerIndex: game.ownPlayer.index
             }
         ));
+        message.emit("clearClock");
     }
     setMenu(buchu ,tishi ,chupai ){
         this.btn_buchu.active  = buchu;
